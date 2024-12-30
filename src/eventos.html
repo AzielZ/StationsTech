@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerenciador de Eventos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+
+  <!-- Container Principal -->
+  <div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <h1 class="text-4xl font-bold">Gerenciador de Eventos</h1>
+      <p class="text-gray-400 mt-2">Crie, edite e gerencie eventos dinamicamente</p>
+    </div>
+
+    <!-- Formulário de Criação -->
+    <div class="bg-gray-800 p-4 rounded-lg mb-6">
+      <h2 class="text-xl font-bold mb-4">Adicionar Novo Evento</h2>
+      <form id="eventForm" class="space-y-4">
+        <div>
+          <label class="block text-gray-400 text-sm mb-1">Texto (máx. 100 caracteres):</label>
+          <input 
+            type="text" 
+            id="eventText" 
+            maxlength="100" 
+            class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:ring-purple-600" 
+            placeholder="Insira o texto do evento" 
+            required>
+        </div>
+        <div>
+          <label class="block text-gray-400 text-sm mb-1">Link (opcional):</label>
+          <input 
+            type="url" 
+            id="eventLink" 
+            class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:ring-purple-600" 
+            placeholder="Insira o link do evento">
+        </div>
+        <div>
+          <label class="block text-gray-400 text-sm mb-1">Imagem (opcional):</label>
+          <input 
+            type="file" 
+            id="eventImage" 
+            accept="image/*" 
+            class="w-full p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring focus:ring-purple-600">
+        </div>
+        <button 
+          type="submit" 
+          class="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded">
+          Criar Evento
+        </button>
+      </form>
+    </div>
+
+    <!-- Local para os Cards -->
+    <div id="cardsContainer" class="space-y-4">
+      <!-- Os cards serão adicionados dinamicamente aqui -->
+    </div>
+  </div>
+
+  <script>
+    const eventForm = document.getElementById('eventForm');
+    const cardsContainer = document.getElementById('cardsContainer');
+    let events = JSON.parse(localStorage.getItem('events')) || []; // Persistência com localStorage
+
+    // Função para obter a data e hora atual
+    function getCurrentDateTime() {
+      const now = new Date();
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      };
+      return now.toLocaleDateString('pt-BR', options);
+    }
+
+    // Função para criar um card
+    function createCard(eventData) {
+      const card = document.createElement('div');
+      card.className = 'bg-gray-800 rounded-lg shadow-lg p-6';
+
+      const linkHTML = eventData.link 
+        ? `<a href="${eventData.link}" target="_blank" class="text-purple-500 hover:underline break-all">${eventData.link}</a>`
+        : '';
+
+      const imageHTML = eventData.image 
+        ? `<img src="${eventData.image}" alt="Imagem do Evento" class="w-full h-40 object-cover rounded mt-4">`
+        : '';
+
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-sm text-gray-400">${eventData.date}</p>
+            <h2 class="text-2xl font-bold text-white mt-1">${eventData.text}</h2>
+            <div class="mt-2">${linkHTML}</div>
+            ${imageHTML}
+          </div>
+        </div>
+        <div class="flex mt-4">
+          <button class="deleteCardBtn bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded">
+            Excluir
+          </button>
+        </div>
+      `;
+
+      // Adicionar evento ao botão de exclusão
+      card.querySelector('.deleteCardBtn').addEventListener('click', () => {
+        const index = events.findIndex(e => e.id === eventData.id);
+        if (index > -1) {
+          events.splice(index, 1); // Remove do array
+          localStorage.setItem('events', JSON.stringify(events)); // Atualiza o localStorage
+          card.remove();
+        }
+      });
+
+      cardsContainer.appendChild(card);
+    }
+
+    // Carregar cards salvos no localStorage
+    function loadSavedCards() {
+      events.forEach(createCard);
+    }
+
+    // Evento de envio do formulário
+    eventForm.addEventListener('submit', (e) => {
+      e.preventDefault(); // Previne o reload da página
+
+      const text = document.getElementById('eventText').value;
+      const link = document.getElementById('eventLink').value;
+      const imageFile = document.getElementById('eventImage').files[0];
+      let imageUrl = '';
+
+      // Carregar imagem como base64 (opcional)
+      if (imageFile) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          imageUrl = reader.result;
+
+          // Adicionar evento após carregar imagem
+          const eventData = {
+            id: Date.now(), // ID único
+            text,
+            link,
+            image: imageUrl,
+            date: getCurrentDateTime()
+          };
+          events.push(eventData);
+          localStorage.setItem('events', JSON.stringify(events));
+          createCard(eventData);
+        };
+        reader.readAsDataURL(imageFile);
+      } else {
+        const eventData = {
+          id: Date.now(),
+          text,
+          link,
+          image: '',
+          date: getCurrentDateTime()
+        };
+        events.push(eventData);
+        localStorage.setItem('events', JSON.stringify(events));
+        createCard(eventData);
+      }
+
+      // Limpar formulário
+      eventForm.reset();
+    });
+
+    // Carregar os eventos salvos ao abrir a página
+    loadSavedCards();
+  </script>
+
+</body>
+</html>
